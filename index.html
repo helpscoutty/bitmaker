@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Bitmaker</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<div class="app">
+
+  <header class="app-header">
+    <h1>BITMAKER</h1>
+  </header>
+
+  <main class="layout">
+
+    <section class="preview-pane">
+      <div class="canvas-wrap" id="dropZone">
+        <canvas id="previewCanvas"></canvas>
+        <div class="dropHint" id="dropHint">
+          <p>Drop an image here</p>
+          <p class="or">or</p>
+          <button type="button" id="uploadBtn" class="btn">Upload image</button>
+          <p class="hint-small">PNG, JPG, WEBP</p>
+        </div>
+        <input type="file" id="fileInput" accept="image/png,image/jpeg,image/webp" hidden />
+      </div>
+
+      <div class="download-row">
+        <button type="button" id="changeImageBtn" class="btn btn-small">Change image</button>
+        <span class="spacer"></span>
+        <button type="button" id="downloadSvgBtn" class="btn" disabled>Download SVG</button>
+        <button type="button" id="downloadGifBtn" class="btn" disabled>Download GIF</button>
+      </div>
+    </section>
+
+    <section class="controls-pane">
+
+      <div class="control-group">
+        <label class="group-label">Mode</label>
+        <div class="segmented" id="modeToggle">
+          <button type="button" class="seg-btn active" data-mode="color">Color</button>
+          <button type="button" class="seg-btn" data-mode="bw">Black &amp; White</button>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label class="group-label" for="resolutionSlider">Resolution <span class="value" id="resolutionValue">64</span></label>
+        <input type="range" id="resolutionSlider" min="8" max="800" step="1" value="64" />
+      </div>
+
+      <div class="control-group">
+        <label class="group-label" for="fuzzSlider">Fuzz <span class="value" id="fuzzValue">0</span></label>
+        <input type="range" id="fuzzSlider" min="0" max="100" step="1" value="0" />
+      </div>
+
+      <div class="control-group" id="paletteGroup">
+        <label class="group-label">Palette <span class="hint-inline">(2–7 colors, drag to reorder)</span></label>
+        <ul class="palette-list" id="paletteList"></ul>
+        <div class="add-color-wrap">
+          <button type="button" id="addColorBtn" class="btn btn-small">+ Add color</button>
+          <div class="add-color-menu hidden" id="addColorMenu"></div>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <footer class="app-footer">
+    <p>All processing happens locally in your browser. Images are never uploaded anywhere.</p>
+  </footer>
+
+</div>
+
+<script src="js/dither.js"></script>
+<script src="js/svgExport.js"></script>
+<script src="js/gifExport.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
