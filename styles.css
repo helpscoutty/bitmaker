@@ -69,6 +69,14 @@ body {
   outline-offset: -2px;
 }
 
+/* Once an image is loaded, drop the checkerboard/centering box and let the
+   canvas render at its own aspect ratio with no letterboxing around it. */
+.canvas-wrap.has-image {
+  min-height: 0;
+  display: block;
+  background: none;
+}
+
 #previewCanvas {
   max-width: 100%;
   max-height: 70vh;
@@ -76,7 +84,12 @@ body {
   image-rendering: pixelated;
 }
 
-#previewCanvas.has-image { display: block; }
+#previewCanvas.has-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: none;
+}
 
 .dropHint {
   text-align: center;
@@ -215,18 +228,6 @@ input[type="range"] {
   padding: 6px 8px;
 }
 
-.palette-row.dragging { opacity: 0.4; }
-.palette-row.drag-over { border-color: var(--accent); }
-
-.drag-handle {
-  cursor: grab;
-  color: #b7bcc2;
-  font-size: 14px;
-  user-select: none;
-  width: 14px;
-  text-align: center;
-}
-
 .swatch {
   width: 26px;
   height: 26px;
@@ -242,23 +243,6 @@ input[type="range"] {
   font-size: 12px;
   color: var(--ink-soft);
 }
-
-.reorder-btns {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
-
-.reorder-btns button {
-  border: none;
-  background: transparent;
-  color: var(--ink-soft);
-  cursor: pointer;
-  font-size: 10px;
-  line-height: 1;
-  padding: 1px 2px;
-}
-.reorder-btns button:disabled { color: #ddd; cursor: not-allowed; }
 
 .remove-btn {
   border: none;

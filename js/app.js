@@ -12,8 +12,7 @@
     fuzz: 0,
     palette: ALL_COLORS.slice(),
     image: null,
-    lastResult: null,
-    dragIndex: null
+    lastResult: null
   };
 
   var els = {
@@ -62,6 +61,7 @@
     els.previewCanvas.height = result.outH;
     ctx.drawImage(result.previewCanvas, 0, 0);
     els.previewCanvas.classList.add("has-image");
+    els.dropZone.classList.add("has-image");
     els.dropHint.classList.add("hidden");
     els.changeImageBtn.classList.add("visible");
 
@@ -133,30 +133,6 @@
     state.palette.forEach(function (hex, i) {
       var li = document.createElement("li");
       li.className = "palette-row";
-      li.draggable = true;
-      li.dataset.index = i;
-
-      var handle = document.createElement("span");
-      handle.className = "drag-handle";
-      handle.textContent = "⋮⋮";
-      handle.title = "Drag to reorder";
-
-      var reorderBtns = document.createElement("div");
-      reorderBtns.className = "reorder-btns";
-      var upBtn = document.createElement("button");
-      upBtn.type = "button";
-      upBtn.textContent = "▲";
-      upBtn.disabled = i === 0;
-      upBtn.title = "Move up (brighter/darker order)";
-      upBtn.addEventListener("click", function () { moveColor(i, i - 1); });
-      var downBtn = document.createElement("button");
-      downBtn.type = "button";
-      downBtn.textContent = "▼";
-      downBtn.disabled = i === state.palette.length - 1;
-      downBtn.title = "Move down";
-      downBtn.addEventListener("click", function () { moveColor(i, i + 1); });
-      reorderBtns.appendChild(upBtn);
-      reorderBtns.appendChild(downBtn);
 
       var swatch = document.createElement("span");
       swatch.className = "swatch";
@@ -179,33 +155,9 @@
         scheduleRender();
       });
 
-      li.appendChild(handle);
-      li.appendChild(reorderBtns);
       li.appendChild(swatch);
       li.appendChild(hexLabel);
       li.appendChild(removeBtn);
-
-      li.addEventListener("dragstart", function () {
-        state.dragIndex = i;
-        li.classList.add("dragging");
-      });
-      li.addEventListener("dragend", function () {
-        li.classList.remove("dragging");
-      });
-      li.addEventListener("dragover", function (e) {
-        e.preventDefault();
-        li.classList.add("drag-over");
-      });
-      li.addEventListener("dragleave", function () {
-        li.classList.remove("drag-over");
-      });
-      li.addEventListener("drop", function (e) {
-        e.preventDefault();
-        li.classList.remove("drag-over");
-        if (state.dragIndex === null || state.dragIndex === i) return;
-        moveColor(state.dragIndex, i);
-        state.dragIndex = null;
-      });
 
       els.paletteList.appendChild(li);
     });
@@ -244,14 +196,6 @@
   }
   function closeAddColorMenu() {
     els.addColorMenu.classList.add("hidden");
-  }
-
-  function moveColor(from, to) {
-    if (to < 0 || to >= state.palette.length) return;
-    var item = state.palette.splice(from, 1)[0];
-    state.palette.splice(to, 0, item);
-    renderPaletteList();
-    scheduleRender();
   }
 
   els.addColorBtn.addEventListener("click", function (e) {
