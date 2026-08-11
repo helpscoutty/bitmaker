@@ -5,7 +5,7 @@
 (function () {
   "use strict";
 
-  var LONG_EDGE = 2000; // fixed preview/export size, per spec item 1
+  var LONG_EDGE = 3000; // fixed preview/export size; upscales or downscales to hit this
 
   // Atkinson dithering only distributes 6/8 of the quantization error
   // (the other 2/8 is discarded), which is what gives it its characteristic

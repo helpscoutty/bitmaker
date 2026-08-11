@@ -86,6 +86,30 @@
     img.src = url;
   }
 
+  // A diagonal sweep through the brand palette, shown until the user
+  // uploads their own image, so there's always something to preview.
+  function loadDefaultGradientImage() {
+    var w = 800, h = 600;
+    var canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    var ctx = canvas.getContext("2d");
+    var gradient = ctx.createLinearGradient(0, 0, w, h);
+    gradient.addColorStop(0, "#FFDD99");
+    gradient.addColorStop(0.35, "#FA7A64");
+    gradient.addColorStop(0.65, "#096DF9");
+    gradient.addColorStop(1, "#7935CF");
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, w, h);
+
+    var img = new Image();
+    img.onload = function () {
+      state.image = img;
+      scheduleRender();
+    };
+    img.src = canvas.toDataURL("image/png");
+  }
+
   // --- Upload wiring ---
   els.uploadBtn.addEventListener("click", function () { els.fileInput.click(); });
   els.fileInput.addEventListener("change", function (e) {
@@ -217,6 +241,7 @@
   });
 
   renderPaletteList();
+  loadDefaultGradientImage();
 
   // --- Downloads ---
   var MONTH_ABBR = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
