@@ -142,7 +142,7 @@
     var imageData = ctx.getImageData(0, 0, outW, outH);
     applyExposure(imageData.data, exposure);
     if (desaturate) toGrayscaleInPlace(imageData.data);
-    if (fuzzAmount) applyBoxBlur(imageData.data, outW, outH, Math.round(fuzzAmount * 0.24));
+    if (fuzzAmount) applyBoxBlur(imageData.data, outW, outH, Math.round(fuzzAmount * 0.72));
     ctx.putImageData(imageData, 0, 0);
     return canvas;
   }
