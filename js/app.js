@@ -3,6 +3,8 @@
 
   // The only colors selectable anywhere in the palette editor.
   var ALL_COLORS = ["#FFFFFF", "#F5F2F0", "#FFDD99", "#FA7A64", "#096DF9", "#7935CF", "#131B24"];
+  // White and near-black are available but not pre-selected by default.
+  var DISABLED_BY_DEFAULT = ["#FFFFFF", "#131B24"];
   var MAX_COLORS = ALL_COLORS.length;
   var MIN_COLORS = 2;
 
@@ -11,7 +13,7 @@
     resolution: 64,
     exposure: 0,
     fuzz: 0,
-    palette: ALL_COLORS.slice(),
+    palette: ALL_COLORS.filter(function (hex) { return DISABLED_BY_DEFAULT.indexOf(hex) === -1; }),
     image: null,
     lastResult: null
   };
@@ -22,7 +24,6 @@
     dropHint: document.getElementById("dropHint"),
     fileInput: document.getElementById("fileInput"),
     uploadBtn: document.getElementById("uploadBtn"),
-    changeImageBtn: document.getElementById("changeImageBtn"),
     modeToggle: document.getElementById("modeToggle"),
     resolutionSlider: document.getElementById("resolutionSlider"),
     resolutionValue: document.getElementById("resolutionValue"),
@@ -67,7 +68,7 @@
     els.previewCanvas.classList.add("has-image");
     els.dropZone.classList.add("has-image");
     els.dropHint.classList.add("hidden");
-    els.changeImageBtn.classList.add("visible");
+    els.uploadBtn.textContent = "Change image";
 
     els.downloadSvgBtn.disabled = false;
     els.downloadGifBtn.disabled = false;
@@ -87,7 +88,6 @@
 
   // --- Upload wiring ---
   els.uploadBtn.addEventListener("click", function () { els.fileInput.click(); });
-  els.changeImageBtn.addEventListener("click", function () { els.fileInput.click(); });
   els.fileInput.addEventListener("change", function (e) {
     if (e.target.files && e.target.files[0]) loadImageFile(e.target.files[0]);
   });

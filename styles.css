@@ -69,12 +69,13 @@ body {
   outline-offset: -2px;
 }
 
-/* Once an image is loaded, drop the checkerboard/centering box and let the
-   canvas render at its own aspect ratio with no letterboxing around it. */
+/* Once an image is loaded, drop the checkerboard/centering box so nothing
+   but the image itself shows — just anchor it to the top and center it
+   horizontally in case its height is capped below the wrap's full width. */
 .canvas-wrap.has-image {
   min-height: 0;
-  display: block;
   background: none;
+  align-items: flex-start;
 }
 
 #previewCanvas {
@@ -86,9 +87,10 @@ body {
 
 #previewCanvas.has-image {
   display: block;
-  width: 100%;
+  width: auto;
   height: auto;
-  max-height: none;
+  max-width: 100%;
+  max-height: 100vh;
 }
 
 .dropHint {
@@ -97,7 +99,6 @@ body {
 }
 
 .dropHint p { margin: 4px 0; }
-.dropHint .or { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; }
 .dropHint .hint-small { font-size: 12px; color: #9aa1a9; }
 
 .dropHint.hidden { display: none; }
@@ -126,23 +127,17 @@ body {
 }
 .btn-small:hover:not(:disabled) { background: #f0f0f0; }
 
-.download-row {
+#uploadBtn {
+  width: 100%;
+}
+
+.download-group {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 14px;
+  gap: 8px;
 }
 
-.download-row .spacer {
+.download-group .btn {
   flex: 1;
-}
-
-#changeImageBtn {
-  display: none;
-}
-
-#changeImageBtn.visible {
-  display: inline-block;
 }
 
 .controls-pane {

@@ -20,22 +20,17 @@
         <canvas id="previewCanvas"></canvas>
         <div class="dropHint" id="dropHint">
           <p>Drop an image here</p>
-          <p class="or">or</p>
-          <button type="button" id="uploadBtn" class="btn">Upload image</button>
           <p class="hint-small">PNG, JPG, WEBP</p>
         </div>
-        <input type="file" id="fileInput" accept="image/png,image/jpeg,image/webp" hidden />
-      </div>
-
-      <div class="download-row">
-        <button type="button" id="changeImageBtn" class="btn btn-small">Change image</button>
-        <span class="spacer"></span>
-        <button type="button" id="downloadSvgBtn" class="btn" disabled>Download SVG</button>
-        <button type="button" id="downloadGifBtn" class="btn" disabled>Download GIF</button>
       </div>
     </section>
 
     <section class="controls-pane">
+
+      <div class="control-group">
+        <button type="button" id="uploadBtn" class="btn">Upload image</button>
+        <input type="file" id="fileInput" accept="image/png,image/jpeg,image/webp" hidden />
+      </div>
 
       <div class="control-group">
         <label class="group-label">Mode</label>
@@ -67,6 +62,11 @@
           <button type="button" id="addColorBtn" class="btn btn-small">+ Add color</button>
           <div class="add-color-menu hidden" id="addColorMenu"></div>
         </div>
+      </div>
+
+      <div class="control-group download-group">
+        <button type="button" id="downloadSvgBtn" class="btn" disabled>Download SVG</button>
+        <button type="button" id="downloadGifBtn" class="btn" disabled>Download GIF</button>
       </div>
 
     </section>
