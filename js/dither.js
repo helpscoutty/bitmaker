@@ -44,27 +44,107 @@
     return { w: Math.max(1, Math.round(r * outW / outH)), h: r };
   }
 
-  // Draws the source image into an outW x outH canvas, optionally blurred
-  // ("fuzz"), optionally desaturated for B&W mode, before pixelation.
-  function prepareWorkingCanvas(img, outW, outH, fuzzAmount, desaturate) {
-    var base = document.createElement("canvas");
-    base.width = outW;
-    base.height = outH;
-    var bctx = base.getContext("2d");
-    bctx.drawImage(img, 0, 0, outW, outH);
+  // Shifts overall brightness up/down (a plain additive brightness shift,
+  // not a multiplicative photographic exposure curve) before anything else
+  // runs, so it affects the source tone the same way in both modes.
+  function applyExposure(pixels, amount) {
+    if (!amount) return;
+    var shift = amount * 2.55; // maps -100..100 to roughly -255..255
+    for (var i = 0; i < pixels.length; i += 4) {
+      pixels[i] = clamp255(pixels[i] + shift);
+      pixels[i + 1] = clamp255(pixels[i + 1] + shift);
+      pixels[i + 2] = clamp255(pixels[i + 2] + shift);
+    }
+  }
 
-    if (!fuzzAmount && !desaturate) return base;
+  function clamp255(v) {
+    return v < 0 ? 0 : v > 255 ? 255 : v;
+  }
 
-    var out = document.createElement("canvas");
-    out.width = outW;
-    out.height = outH;
-    var octx = out.getContext("2d");
-    var filters = [];
-    if (desaturate) filters.push("grayscale(1)");
-    if (fuzzAmount) filters.push("blur(" + (fuzzAmount * 0.24).toFixed(2) + "px)");
-    octx.filter = filters.join(" ");
-    octx.drawImage(base, 0, 0);
-    return out;
+  function toGrayscaleInPlace(pixels) {
+    for (var i = 0; i < pixels.length; i += 4) {
+      var gray = 0.299 * pixels[i] + 0.587 * pixels[i + 1] + 0.114 * pixels[i + 2];
+      pixels[i] = pixels[i + 1] = pixels[i + 2] = gray;
+    }
+  }
+
+  // Separable sliding-window box blur (O(1) per pixel regardless of
+  // radius). Three horizontal+vertical passes approximate a Gaussian blur.
+  // Implemented by hand instead of canvas's ctx.filter = "blur(...)"
+  // because that CSS-filter path is unreliable in Safari.
+  function boxBlurH(src, dst, w, h, r) {
+    var windowSize = r * 2 + 1;
+    var stride = w * 4;
+    for (var y = 0; y < h; y++) {
+      var rowOffset = y * stride;
+      for (var c = 0; c < 3; c++) {
+        var sum = 0;
+        for (var i = -r; i <= r; i++) {
+          var xi = Math.min(w - 1, Math.max(0, i));
+          sum += src[rowOffset + xi * 4 + c];
+        }
+        dst[rowOffset + c] = Math.round(sum / windowSize);
+        for (var x = 1; x < w; x++) {
+          var removeX = Math.min(w - 1, Math.max(0, x - 1 - r));
+          var addX = Math.min(w - 1, Math.max(0, x + r));
+          sum += src[rowOffset + addX * 4 + c] - src[rowOffset + removeX * 4 + c];
+          dst[rowOffset + x * 4 + c] = Math.round(sum / windowSize);
+        }
+      }
+      for (var x2 = 0; x2 < w; x2++) dst[rowOffset + x2 * 4 + 3] = src[rowOffset + x2 * 4 + 3];
+    }
+  }
+
+  function boxBlurV(src, dst, w, h, r) {
+    var windowSize = r * 2 + 1;
+    var stride = w * 4;
+    for (var x = 0; x < w; x++) {
+      var colOffset = x * 4;
+      for (var c = 0; c < 3; c++) {
+        var sum = 0;
+        for (var i = -r; i <= r; i++) {
+          var yi = Math.min(h - 1, Math.max(0, i));
+          sum += src[yi * stride + colOffset + c];
+        }
+        dst[colOffset + c] = Math.round(sum / windowSize);
+        for (var y = 1; y < h; y++) {
+          var removeY = Math.min(h - 1, Math.max(0, y - 1 - r));
+          var addY = Math.min(h - 1, Math.max(0, y + r));
+          sum += src[addY * stride + colOffset + c] - src[removeY * stride + colOffset + c];
+          dst[y * stride + colOffset + c] = Math.round(sum / windowSize);
+        }
+      }
+      for (var y2 = 0; y2 < h; y2++) dst[y2 * stride + colOffset + 3] = src[y2 * stride + colOffset + 3];
+    }
+  }
+
+  function applyBoxBlur(pixels, w, h, radius) {
+    if (radius <= 0) return;
+    var temp = new Uint8ClampedArray(pixels.length);
+    for (var pass = 0; pass < 3; pass++) {
+      boxBlurH(pixels, temp, w, h, radius);
+      boxBlurV(temp, pixels, w, h, radius);
+    }
+  }
+
+  // Draws the source image into an outW x outH canvas, applying exposure,
+  // desaturation (B&W mode), and blur ("fuzz") via direct pixel
+  // manipulation rather than canvas filters, before pixelation.
+  function prepareWorkingCanvas(img, outW, outH, exposure, fuzzAmount, desaturate) {
+    var canvas = document.createElement("canvas");
+    canvas.width = outW;
+    canvas.height = outH;
+    var ctx = canvas.getContext("2d");
+    ctx.drawImage(img, 0, 0, outW, outH);
+
+    if (!exposure && !fuzzAmount && !desaturate) return canvas;
+
+    var imageData = ctx.getImageData(0, 0, outW, outH);
+    applyExposure(imageData.data, exposure);
+    if (desaturate) toGrayscaleInPlace(imageData.data);
+    if (fuzzAmount) applyBoxBlur(imageData.data, outW, outH, Math.round(fuzzAmount * 0.24));
+    ctx.putImageData(imageData, 0, 0);
+    return canvas;
   }
 
   function toBlockImageData(sourceCanvas, blockW, blockH) {
@@ -182,12 +262,13 @@
     var mode = opts.mode; // 'color' | 'bw'
     var resolution = opts.resolution;
     var fuzz = opts.fuzz;
+    var exposure = opts.exposure || 0;
     var paletteHexes = opts.paletteColors || []; // array of hex strings
 
     var outSize = computeOutputSize(img.naturalWidth, img.naturalHeight);
     var blockSize = computeBlockSize(outSize.w, outSize.h, resolution);
 
-    var working = prepareWorkingCanvas(img, outSize.w, outSize.h, fuzz, mode === "bw");
+    var working = prepareWorkingCanvas(img, outSize.w, outSize.h, exposure, fuzz, mode === "bw");
     var blockImageData = toBlockImageData(working, blockSize.w, blockSize.h);
 
     var palette;

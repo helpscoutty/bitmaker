@@ -9,6 +9,7 @@
   var state = {
     mode: "color",
     resolution: 64,
+    exposure: 0,
     fuzz: 0,
     palette: ALL_COLORS.slice(),
     image: null,
@@ -25,6 +26,8 @@
     modeToggle: document.getElementById("modeToggle"),
     resolutionSlider: document.getElementById("resolutionSlider"),
     resolutionValue: document.getElementById("resolutionValue"),
+    exposureSlider: document.getElementById("exposureSlider"),
+    exposureValue: document.getElementById("exposureValue"),
     fuzzSlider: document.getElementById("fuzzSlider"),
     fuzzValue: document.getElementById("fuzzValue"),
     paletteGroup: document.getElementById("paletteGroup"),
@@ -51,6 +54,7 @@
       image: state.image,
       mode: state.mode,
       resolution: state.resolution,
+      exposure: state.exposure,
       fuzz: state.fuzz,
       paletteColors: state.palette
     });
@@ -117,6 +121,11 @@
   els.resolutionSlider.addEventListener("input", function () {
     state.resolution = Number(els.resolutionSlider.value);
     els.resolutionValue.textContent = state.resolution;
+    scheduleRender();
+  });
+  els.exposureSlider.addEventListener("input", function () {
+    state.exposure = Number(els.exposureSlider.value);
+    els.exposureValue.textContent = state.exposure;
     scheduleRender();
   });
   els.fuzzSlider.addEventListener("input", function () {
