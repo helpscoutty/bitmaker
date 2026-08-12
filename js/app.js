@@ -2,7 +2,7 @@
   "use strict";
 
   // The only colors selectable anywhere in the palette editor.
-  var ALL_COLORS = ["#FFFFFF", "#F5F2F0", "#FFDD99", "#FA7A64", "#0064F0", "#5E18B7", "#131B24"];
+  var ALL_COLORS = ["#FFFFFF", "#F5F2F0", "#FFDD99", "#FA7A64", "#0569F4", "#5E18B7", "#131B24"];
   // White and near-black are available but not pre-selected by default.
   var DISABLED_BY_DEFAULT = ["#FFFFFF", "#131B24"];
   var MAX_COLORS = ALL_COLORS.length;
@@ -97,7 +97,7 @@
     var gradient = ctx.createLinearGradient(0, 0, w, h);
     gradient.addColorStop(0, "#FFDD99");
     gradient.addColorStop(0.35, "#FA7A64");
-    gradient.addColorStop(0.65, "#0064F0");
+    gradient.addColorStop(0.65, "#0569F4");
     gradient.addColorStop(1, "#5E18B7");
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, w, h);
