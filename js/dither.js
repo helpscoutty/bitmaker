@@ -46,7 +46,7 @@
 
   // Shifts overall brightness up/down (a plain additive brightness shift,
   // not a multiplicative photographic exposure curve) before anything else
-  // runs, so it affects the source tone the same way in both modes.
+  // runs.
   function applyExposure(pixels, amount) {
     if (!amount) return;
     var shift = amount * 2.55; // maps -100..100 to roughly -255..255
@@ -59,13 +59,6 @@
 
   function clamp255(v) {
     return v < 0 ? 0 : v > 255 ? 255 : v;
-  }
-
-  function toGrayscaleInPlace(pixels) {
-    for (var i = 0; i < pixels.length; i += 4) {
-      var gray = 0.299 * pixels[i] + 0.587 * pixels[i + 1] + 0.114 * pixels[i + 2];
-      pixels[i] = pixels[i + 1] = pixels[i + 2] = gray;
-    }
   }
 
   // Separable sliding-window box blur (O(1) per pixel regardless of
@@ -127,21 +120,20 @@
     }
   }
 
-  // Draws the source image into an outW x outH canvas, applying exposure,
-  // desaturation (B&W mode), and blur ("fuzz") via direct pixel
-  // manipulation rather than canvas filters, before pixelation.
-  function prepareWorkingCanvas(img, outW, outH, exposure, fuzzAmount, desaturate) {
+  // Draws the source image into an outW x outH canvas, applying exposure
+  // and blur ("fuzz") via direct pixel manipulation rather than canvas
+  // filters, before pixelation.
+  function prepareWorkingCanvas(img, outW, outH, exposure, fuzzAmount) {
     var canvas = document.createElement("canvas");
     canvas.width = outW;
     canvas.height = outH;
     var ctx = canvas.getContext("2d");
     ctx.drawImage(img, 0, 0, outW, outH);
 
-    if (!exposure && !fuzzAmount && !desaturate) return canvas;
+    if (!exposure && !fuzzAmount) return canvas;
 
     var imageData = ctx.getImageData(0, 0, outW, outH);
     applyExposure(imageData.data, exposure);
-    if (desaturate) toGrayscaleInPlace(imageData.data);
     if (fuzzAmount) applyBoxBlur(imageData.data, outW, outH, Math.round(fuzzAmount * 0.72));
     ctx.putImageData(imageData, 0, 0);
     return canvas;
@@ -259,7 +251,6 @@
   // Full pipeline entry point.
   function process(opts) {
     var img = opts.image;
-    var mode = opts.mode; // 'color' | 'bw'
     var resolution = opts.resolution;
     var fuzz = opts.fuzz;
     var exposure = opts.exposure || 0;
@@ -268,20 +259,12 @@
     var outSize = computeOutputSize(img.naturalWidth, img.naturalHeight);
     var blockSize = computeBlockSize(outSize.w, outSize.h, resolution);
 
-    var working = prepareWorkingCanvas(img, outSize.w, outSize.h, exposure, fuzz, mode === "bw");
+    var working = prepareWorkingCanvas(img, outSize.w, outSize.h, exposure, fuzz);
     var blockImageData = toBlockImageData(working, blockSize.w, blockSize.h);
 
-    var palette;
-    if (mode === "bw") {
-      palette = [
-        { r: 255, g: 255, b: 255 },
-        { r: 0, g: 0, b: 0 }
-      ];
-    } else {
-      palette = paletteHexes.map(function (hex) {
-        return hexToRgb(hex);
-      });
-    }
+    var palette = paletteHexes.map(function (hex) {
+      return hexToRgb(hex);
+    });
 
     var indices = ditherAtkinson(blockImageData, palette);
     var previewCanvas = buildPreviewCanvas(blockSize.w, blockSize.h, indices, palette, outSize.w, outSize.h);

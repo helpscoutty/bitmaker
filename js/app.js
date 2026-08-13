@@ -9,7 +9,6 @@
   var MIN_COLORS = 2;
 
   var state = {
-    mode: "color",
     resolution: 64,
     exposure: 0,
     fuzz: 0,
@@ -24,14 +23,12 @@
     dropHint: document.getElementById("dropHint"),
     fileInput: document.getElementById("fileInput"),
     uploadBtn: document.getElementById("uploadBtn"),
-    modeToggle: document.getElementById("modeToggle"),
     resolutionSlider: document.getElementById("resolutionSlider"),
     resolutionValue: document.getElementById("resolutionValue"),
     exposureSlider: document.getElementById("exposureSlider"),
     exposureValue: document.getElementById("exposureValue"),
     fuzzSlider: document.getElementById("fuzzSlider"),
     fuzzValue: document.getElementById("fuzzValue"),
-    paletteGroup: document.getElementById("paletteGroup"),
     paletteList: document.getElementById("paletteList"),
     addColorBtn: document.getElementById("addColorBtn"),
     addColorMenu: document.getElementById("addColorMenu"),
@@ -53,7 +50,6 @@
     if (!state.image) return;
     var result = window.Bitmaker.process({
       image: state.image,
-      mode: state.mode,
       resolution: state.resolution,
       exposure: state.exposure,
       fuzz: state.fuzz,
@@ -127,19 +123,6 @@
     els.dropZone.classList.remove("dragover");
     if (e.dataTransfer.files && e.dataTransfer.files[0]) loadImageFile(e.dataTransfer.files[0]);
   });
-
-  // --- Mode toggle ---
-  els.modeToggle.addEventListener("click", function (e) {
-    var btn = e.target.closest(".seg-btn");
-    if (!btn) return;
-    state.mode = btn.dataset.mode;
-    Array.prototype.forEach.call(els.modeToggle.querySelectorAll(".seg-btn"), function (b) {
-      b.classList.toggle("active", b === btn);
-    });
-    els.paletteGroup.style.display = state.mode === "bw" ? "none" : "";
-    scheduleRender();
-  });
-  els.paletteGroup.style.display = state.mode === "bw" ? "none" : "";
 
   // --- Sliders ---
   els.resolutionSlider.addEventListener("input", function () {
