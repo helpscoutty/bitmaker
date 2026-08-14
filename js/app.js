@@ -236,7 +236,7 @@
   // --- Downloads ---
   var MONTH_ABBR = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
 
-  // e.g. "hs-bitmaker-aug-7-2:43pm.svg"
+  // e.g. "hs-bitmaker-aug-14-4_57pm-res1200-exp0-fuzz21.gif"
   function buildFilename(ext) {
     var now = new Date();
     var month = MONTH_ABBR[now.getMonth()];
@@ -245,7 +245,8 @@
     var hours12 = hours24 % 12 || 12;
     var minutes = String(now.getMinutes()).padStart(2, "0");
     var ampm = hours24 < 12 ? "am" : "pm";
-    return "hs-bitmaker-" + month + "-" + day + "-" + hours12 + ":" + minutes + ampm + "." + ext;
+    var settings = "res" + state.resolution + "-exp" + state.exposure + "-fuzz" + state.fuzz;
+    return "hs-bitmaker-" + month + "-" + day + "-" + hours12 + "_" + minutes + ampm + "-" + settings + "." + ext;
   }
 
   function triggerDownload(blob, filename) {
