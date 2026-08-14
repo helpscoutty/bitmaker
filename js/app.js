@@ -2,7 +2,7 @@
   "use strict";
 
   // The only colors selectable anywhere in the palette editor.
-  var ALL_COLORS = ["#FFFFFF", "#F5F2F0", "#FFDD99", "#FA7A64", "#0569F4", "#5E18B7", "#131B24"];
+  var ALL_COLORS = ["#FFFFFF", "#F5F2F0", "#FFDD99", "#FA7A64", "#0064F0", "#5E18B7", "#131B24"];
   // White and near-black are available but not pre-selected by default.
   var DISABLED_BY_DEFAULT = ["#FFFFFF", "#131B24"];
   var MAX_COLORS = ALL_COLORS.length;
@@ -10,6 +10,7 @@
 
   var state = {
     resolution: 64,
+    invert: false,
     exposure: 0,
     fuzz: 0,
     palette: ALL_COLORS.filter(function (hex) { return DISABLED_BY_DEFAULT.indexOf(hex) === -1; }),
@@ -25,6 +26,7 @@
     uploadBtn: document.getElementById("uploadBtn"),
     resolutionSlider: document.getElementById("resolutionSlider"),
     resolutionValue: document.getElementById("resolutionValue"),
+    invertCheckbox: document.getElementById("invertCheckbox"),
     exposureSlider: document.getElementById("exposureSlider"),
     exposureValue: document.getElementById("exposureValue"),
     fuzzSlider: document.getElementById("fuzzSlider"),
@@ -51,6 +53,7 @@
     var result = window.Bitmaker.process({
       image: state.image,
       resolution: state.resolution,
+      invert: state.invert,
       exposure: state.exposure,
       fuzz: state.fuzz,
       paletteColors: state.palette
@@ -93,7 +96,7 @@
     var gradient = ctx.createLinearGradient(0, 0, w, h);
     gradient.addColorStop(0, "#FFDD99");
     gradient.addColorStop(0.35, "#FA7A64");
-    gradient.addColorStop(0.65, "#0569F4");
+    gradient.addColorStop(0.65, "#0064F0");
     gradient.addColorStop(1, "#5E18B7");
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, w, h);
@@ -128,6 +131,10 @@
   els.resolutionSlider.addEventListener("input", function () {
     state.resolution = Number(els.resolutionSlider.value);
     els.resolutionValue.textContent = state.resolution;
+    scheduleRender();
+  });
+  els.invertCheckbox.addEventListener("change", function () {
+    state.invert = els.invertCheckbox.checked;
     scheduleRender();
   });
   els.exposureSlider.addEventListener("input", function () {

@@ -61,6 +61,16 @@
     return v < 0 ? 0 : v > 255 ? 255 : v;
   }
 
+  // Turns the source into its photographic negative before anything else
+  // runs, so exposure/blur/dithering all operate on the inverted image.
+  function invertColors(pixels) {
+    for (var i = 0; i < pixels.length; i += 4) {
+      pixels[i] = 255 - pixels[i];
+      pixels[i + 1] = 255 - pixels[i + 1];
+      pixels[i + 2] = 255 - pixels[i + 2];
+    }
+  }
+
   // Separable sliding-window box blur (O(1) per pixel regardless of
   // radius). Three horizontal+vertical passes approximate a Gaussian blur.
   // Implemented by hand instead of canvas's ctx.filter = "blur(...)"
@@ -120,19 +130,20 @@
     }
   }
 
-  // Draws the source image into an outW x outH canvas, applying exposure
-  // and blur ("fuzz") via direct pixel manipulation rather than canvas
-  // filters, before pixelation.
-  function prepareWorkingCanvas(img, outW, outH, exposure, fuzzAmount) {
+  // Draws the source image into an outW x outH canvas, applying invert,
+  // exposure, and blur ("fuzz") via direct pixel manipulation rather than
+  // canvas filters, before pixelation.
+  function prepareWorkingCanvas(img, outW, outH, invert, exposure, fuzzAmount) {
     var canvas = document.createElement("canvas");
     canvas.width = outW;
     canvas.height = outH;
     var ctx = canvas.getContext("2d");
     ctx.drawImage(img, 0, 0, outW, outH);
 
-    if (!exposure && !fuzzAmount) return canvas;
+    if (!invert && !exposure && !fuzzAmount) return canvas;
 
     var imageData = ctx.getImageData(0, 0, outW, outH);
+    if (invert) invertColors(imageData.data);
     applyExposure(imageData.data, exposure);
     if (fuzzAmount) applyBoxBlur(imageData.data, outW, outH, Math.round(fuzzAmount * 0.72));
     ctx.putImageData(imageData, 0, 0);
@@ -254,12 +265,13 @@
     var resolution = opts.resolution;
     var fuzz = opts.fuzz;
     var exposure = opts.exposure || 0;
+    var invert = !!opts.invert;
     var paletteHexes = opts.paletteColors || []; // array of hex strings
 
     var outSize = computeOutputSize(img.naturalWidth, img.naturalHeight);
     var blockSize = computeBlockSize(outSize.w, outSize.h, resolution);
 
-    var working = prepareWorkingCanvas(img, outSize.w, outSize.h, exposure, fuzz);
+    var working = prepareWorkingCanvas(img, outSize.w, outSize.h, invert, exposure, fuzz);
     var blockImageData = toBlockImageData(working, blockSize.w, blockSize.h);
 
     var palette = paletteHexes.map(function (hex) {
