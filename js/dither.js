@@ -29,11 +29,12 @@
     }).join("");
   }
 
-  function computeOutputSize(naturalW, naturalH) {
+  function computeOutputSize(naturalW, naturalH, longEdge) {
+    longEdge = longEdge || LONG_EDGE;
     if (naturalW >= naturalH) {
-      return { w: LONG_EDGE, h: Math.max(1, Math.round(LONG_EDGE * naturalH / naturalW)) };
+      return { w: longEdge, h: Math.max(1, Math.round(longEdge * naturalH / naturalW)) };
     }
-    return { w: Math.max(1, Math.round(LONG_EDGE * naturalW / naturalH)), h: LONG_EDGE };
+    return { w: Math.max(1, Math.round(longEdge * naturalW / naturalH)), h: longEdge };
   }
 
   function computeBlockSize(outW, outH, resolution) {
@@ -268,7 +269,11 @@
     var invert = !!opts.invert;
     var paletteHexes = opts.paletteColors || []; // array of hex strings
 
-    var outSize = computeOutputSize(img.naturalWidth, img.naturalHeight);
+    // img may be an <img> (naturalWidth/Height), a <video> frame
+    // (videoWidth/Height), or a <canvas> (width/height).
+    var srcW = img.naturalWidth || img.videoWidth || img.width;
+    var srcH = img.naturalHeight || img.videoHeight || img.height;
+    var outSize = computeOutputSize(srcW, srcH, opts.longEdge);
     var blockSize = computeBlockSize(outSize.w, outSize.h, resolution);
 
     var working = prepareWorkingCanvas(img, outSize.w, outSize.h, invert, exposure, fuzz);

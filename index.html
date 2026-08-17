@@ -19,8 +19,8 @@
       <div class="canvas-wrap" id="dropZone">
         <canvas id="previewCanvas"></canvas>
         <div class="dropHint" id="dropHint">
-          <p>Drop an image here</p>
-          <p class="hint-small">PNG, JPG, WEBP</p>
+          <p id="dropHintText">Drop an image here</p>
+          <p class="hint-small" id="dropHintFormats">PNG, JPG, WEBP</p>
         </div>
       </div>
     </section>
@@ -28,8 +28,17 @@
     <section class="controls-pane">
 
       <div class="control-group">
+        <label class="group-label">Media</label>
+        <div class="segmented" id="mediaToggle">
+          <button type="button" class="seg-btn active" data-media="still">Still</button>
+          <button type="button" class="seg-btn" data-media="video">Video</button>
+        </div>
+      </div>
+
+      <div class="control-group">
         <button type="button" id="uploadBtn" class="btn">Upload image</button>
         <input type="file" id="fileInput" accept="image/png,image/jpeg,image/webp" hidden />
+        <p class="hint-small" id="uploadHint">PNG, JPG, WEBP</p>
       </div>
 
       <div class="control-group">

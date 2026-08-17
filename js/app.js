@@ -8,13 +8,29 @@
   var MAX_COLORS = ALL_COLORS.length;
   var MIN_COLORS = 2;
 
+  // Video export is capped to keep processing time and file size sane —
+  // 10fps, first 7 seconds only, and a smaller long edge than stills since
+  // GIF encoding cost multiplies by frame count.
+  var VIDEO_FPS = 10;
+  var VIDEO_MAX_SECONDS = 7;
+  var VIDEO_LONG_EDGE = 1200;
+
+  var MEDIA_CONFIG = {
+    still: { accept: "image/png,image/jpeg,image/webp", hint: "PNG, JPG, WEBP", dropText: "Drop an image here", uploadLabel: "Upload image", changeLabel: "Change image" },
+    video: { accept: "video/mp4,video/webm,video/quicktime", hint: "MP4, WEBM, MOV — first " + VIDEO_MAX_SECONDS + "s at " + VIDEO_FPS + "fps", dropText: "Drop a video here", uploadLabel: "Upload video", changeLabel: "Change video" }
+  };
+
   var state = {
+    mediaType: "still",
     resolution: 64,
     invert: false,
     exposure: 0,
     fuzz: 0,
     palette: ALL_COLORS.filter(function (hex) { return DISABLED_BY_DEFAULT.indexOf(hex) === -1; }),
     image: null,
+    videoEl: null,
+    videoUrl: null,
+    videoDuration: 0,
     lastResult: null
   };
 
@@ -22,8 +38,12 @@
     previewCanvas: document.getElementById("previewCanvas"),
     dropZone: document.getElementById("dropZone"),
     dropHint: document.getElementById("dropHint"),
+    dropHintText: document.getElementById("dropHintText"),
+    dropHintFormats: document.getElementById("dropHintFormats"),
     fileInput: document.getElementById("fileInput"),
     uploadBtn: document.getElementById("uploadBtn"),
+    uploadHint: document.getElementById("uploadHint"),
+    mediaToggle: document.getElementById("mediaToggle"),
     resolutionSlider: document.getElementById("resolutionSlider"),
     resolutionValue: document.getElementById("resolutionValue"),
     invertCheckbox: document.getElementById("invertCheckbox"),
@@ -56,7 +76,8 @@
       invert: state.invert,
       exposure: state.exposure,
       fuzz: state.fuzz,
-      paletteColors: state.palette
+      paletteColors: state.palette,
+      longEdge: state.mediaType === "video" ? VIDEO_LONG_EDGE : undefined
     });
     state.lastResult = result;
 
@@ -67,9 +88,9 @@
     els.previewCanvas.classList.add("has-image");
     els.dropZone.classList.add("has-image");
     els.dropHint.classList.add("hidden");
-    els.uploadBtn.textContent = "Change image";
+    els.uploadBtn.textContent = MEDIA_CONFIG[state.mediaType].changeLabel;
 
-    els.downloadSvgBtn.disabled = false;
+    els.downloadSvgBtn.disabled = state.mediaType === "video";
     els.downloadGifBtn.disabled = false;
   }
 
@@ -83,6 +104,69 @@
       URL.revokeObjectURL(url);
     };
     img.src = url;
+  }
+
+  // Loads a video, then seeks to its first frame so there's an immediate
+  // still preview — the full frame-by-frame pass only happens on GIF
+  // download.
+  function loadVideoFile(file) {
+    if (!file || !/^video\/(mp4|webm|quicktime)$/.test(file.type)) return;
+    if (state.videoUrl) URL.revokeObjectURL(state.videoUrl);
+    var url = URL.createObjectURL(file);
+    var video = document.createElement("video");
+    video.muted = true;
+    video.playsInline = true;
+    video.preload = "auto";
+    video.addEventListener("loadedmetadata", function () {
+      state.videoEl = video;
+      state.videoUrl = url;
+      state.videoDuration = video.duration;
+      seekVideoTo(video, 0).then(function () {
+        state.image = video;
+        scheduleRender();
+      });
+    });
+    video.src = url;
+  }
+
+  function seekVideoTo(video, time) {
+    return new Promise(function (resolve) {
+      if (Math.abs(video.currentTime - time) < 0.001) {
+        resolve();
+        return;
+      }
+      function onSeeked() {
+        video.removeEventListener("seeked", onSeeked);
+        resolve();
+      }
+      video.addEventListener("seeked", onSeeked);
+      video.currentTime = time;
+    });
+  }
+
+  // Clears whatever media is currently loaded when switching Still/Video,
+  // since a loaded image can't just become a video (and vice versa).
+  function resetMedia() {
+    if (state.videoUrl) URL.revokeObjectURL(state.videoUrl);
+    state.image = null;
+    state.videoEl = null;
+    state.videoUrl = null;
+    state.videoDuration = 0;
+    state.lastResult = null;
+    els.previewCanvas.classList.remove("has-image");
+    els.dropZone.classList.remove("has-image");
+    els.dropHint.classList.remove("hidden");
+    els.uploadBtn.textContent = MEDIA_CONFIG[state.mediaType].uploadLabel;
+    els.downloadSvgBtn.disabled = true;
+    els.downloadGifBtn.disabled = true;
+  }
+
+  function applyMediaConfig() {
+    var config = MEDIA_CONFIG[state.mediaType];
+    els.fileInput.accept = config.accept;
+    els.uploadHint.textContent = config.hint;
+    els.dropHintText.textContent = config.dropText;
+    els.dropHintFormats.textContent = config.hint;
   }
 
   // A diagonal sweep through the brand palette, shown until the user
@@ -110,9 +194,13 @@
   }
 
   // --- Upload wiring ---
+  function loadFile(file) {
+    if (state.mediaType === "video") loadVideoFile(file);
+    else loadImageFile(file);
+  }
   els.uploadBtn.addEventListener("click", function () { els.fileInput.click(); });
   els.fileInput.addEventListener("change", function (e) {
-    if (e.target.files && e.target.files[0]) loadImageFile(e.target.files[0]);
+    if (e.target.files && e.target.files[0]) loadFile(e.target.files[0]);
   });
   els.dropZone.addEventListener("dragover", function (e) {
     e.preventDefault();
@@ -124,8 +212,21 @@
   els.dropZone.addEventListener("drop", function (e) {
     e.preventDefault();
     els.dropZone.classList.remove("dragover");
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) loadImageFile(e.dataTransfer.files[0]);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
   });
+
+  // --- Media toggle ---
+  els.mediaToggle.addEventListener("click", function (e) {
+    var btn = e.target.closest(".seg-btn");
+    if (!btn || btn.dataset.media === state.mediaType) return;
+    state.mediaType = btn.dataset.media;
+    Array.prototype.forEach.call(els.mediaToggle.querySelectorAll(".seg-btn"), function (b) {
+      b.classList.toggle("active", b === btn);
+    });
+    applyMediaConfig();
+    resetMedia();
+  });
+  applyMediaConfig();
 
   // --- Sliders ---
   els.resolutionSlider.addEventListener("input", function () {
@@ -261,13 +362,12 @@
   }
 
   els.downloadSvgBtn.addEventListener("click", function () {
-    if (!state.lastResult) return;
+    if (state.mediaType === "video" || !state.lastResult) return;
     var svg = window.Bitmaker.buildSvg(state.lastResult);
     triggerDownload(new Blob([svg], { type: "image/svg+xml" }), buildFilename("svg"));
   });
 
-  els.downloadGifBtn.addEventListener("click", function () {
-    if (!state.lastResult) return;
+  function downloadStillGif() {
     els.downloadGifBtn.disabled = true;
     var prevLabel = els.downloadGifBtn.textContent;
     els.downloadGifBtn.textContent = "Generating…";
@@ -280,5 +380,65 @@
         els.downloadGifBtn.textContent = prevLabel;
       }
     }, 0);
+  }
+
+  // Snapshots the current settings once so a mid-export slider change
+  // can't produce a GIF with inconsistent frames, then walks the video
+  // frame-by-frame (seeking + reprocessing each one) before encoding.
+  async function downloadVideoGif() {
+    els.downloadGifBtn.disabled = true;
+    var prevLabel = els.downloadGifBtn.textContent;
+    var settings = {
+      resolution: state.resolution,
+      invert: state.invert,
+      exposure: state.exposure,
+      fuzz: state.fuzz,
+      paletteColors: state.palette.slice()
+    };
+    try {
+      var duration = Math.min(state.videoDuration, VIDEO_MAX_SECONDS);
+      var frameCount = Math.max(1, Math.round(duration * VIDEO_FPS));
+      var blockFrames = [];
+      var outW, outH, palette;
+      for (var i = 0; i < frameCount; i++) {
+        els.downloadGifBtn.textContent = "Processing " + (i + 1) + "/" + frameCount + "…";
+        await seekVideoTo(state.videoEl, i / VIDEO_FPS);
+        var result = window.Bitmaker.process({
+          image: state.videoEl,
+          resolution: settings.resolution,
+          invert: settings.invert,
+          exposure: settings.exposure,
+          fuzz: settings.fuzz,
+          paletteColors: settings.paletteColors,
+          longEdge: VIDEO_LONG_EDGE
+        });
+        outW = result.outW;
+        outH = result.outH;
+        palette = result.palette;
+        blockFrames.push({ blockW: result.blockW, blockH: result.blockH, indices: result.indices });
+      }
+      els.downloadGifBtn.textContent = "Encoding…";
+      var gifBytes = window.Bitmaker.buildAnimatedGif({
+        outW: outW,
+        outH: outH,
+        palette: palette,
+        blockFrames: blockFrames,
+        delayCentiseconds: Math.round(100 / VIDEO_FPS)
+      });
+      triggerDownload(new Blob([gifBytes], { type: "image/gif" }), buildFilename("gif"));
+    } finally {
+      els.downloadGifBtn.disabled = false;
+      els.downloadGifBtn.textContent = prevLabel;
+    }
+  }
+
+  els.downloadGifBtn.addEventListener("click", function () {
+    if (state.mediaType === "video") {
+      if (!state.videoEl) return;
+      downloadVideoGif();
+    } else {
+      if (!state.lastResult) return;
+      downloadStillGif();
+    }
   });
 })();

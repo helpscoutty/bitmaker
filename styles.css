@@ -106,7 +106,7 @@ body {
 }
 
 .dropHint p { margin: 4px 0; }
-.dropHint .hint-small { font-size: 12px; color: #9aa1a9; }
+.hint-small { font-size: 12px; color: #9aa1a9; margin: 0; }
 
 .dropHint.hidden { display: none; }
 

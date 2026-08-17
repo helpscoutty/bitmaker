@@ -157,6 +157,82 @@
     return encodeGif(result.outW, result.outH, expanded, result.palette);
   }
 
+  // Multi-frame variant for video export: same header/color-table/LZW
+  // machinery as encodeGif, but with a Netscape loop extension and one
+  // Graphic Control Extension (frame delay) per frame.
+  // frames: array of Uint8Array index grids, each width*height, all
+  // sharing the same `palette`. delayCentiseconds: frame delay in 1/100s
+  // (e.g. 10 for 10fps).
+  function encodeAnimatedGif(width, height, frames, palette, delayCentiseconds) {
+    var numColors = Math.max(2, palette.length);
+    var bitsPerPixel = Math.max(1, Math.ceil(Math.log2(numColors)));
+    var tableSizeExp = bitsPerPixel - 1;
+    var tableEntries = 1 << (tableSizeExp + 1);
+    var minCodeSize = Math.max(bitsPerPixel, 2);
+
+    var bytes = [];
+    // Header
+    "GIF89a".split("").forEach(function (ch) { bytes.push(ch.charCodeAt(0)); });
+    // Logical Screen Descriptor
+    pushU16(bytes, width);
+    pushU16(bytes, height);
+    var packed = 0x80 | (tableSizeExp << 4) | tableSizeExp;
+    bytes.push(packed);
+    bytes.push(0); // background color index
+    bytes.push(0); // pixel aspect ratio
+    // Global Color Table
+    for (var i = 0; i < tableEntries; i++) {
+      var c = palette[i] || { r: 0, g: 0, b: 0 };
+      bytes.push(c.r, c.g, c.b);
+    }
+
+    // Netscape Application Extension: loop forever. Only meaningful (and
+    // only added) for actual animations.
+    if (frames.length > 1) {
+      bytes.push(0x21, 0xff, 0x0b);
+      "NETSCAPE2.0".split("").forEach(function (ch) { bytes.push(ch.charCodeAt(0)); });
+      bytes.push(0x03, 0x01, 0x00, 0x00, 0x00);
+    }
+
+    frames.forEach(function (frameIndices) {
+      // Graphic Control Extension: sets this frame's display delay.
+      bytes.push(0x21, 0xf9, 0x04);
+      bytes.push(0x00); // no transparency, no disposal method specified
+      pushU16(bytes, delayCentiseconds);
+      bytes.push(0x00); // transparent color index (unused)
+      bytes.push(0x00); // block terminator
+
+      // Image Descriptor
+      bytes.push(0x2c);
+      pushU16(bytes, 0);
+      pushU16(bytes, 0);
+      pushU16(bytes, width);
+      pushU16(bytes, height);
+      bytes.push(0x00);
+
+      // Image Data
+      bytes.push(minCodeSize);
+      var lzwBytes = lzwEncode(minCodeSize, frameIndices);
+      var subBlocks = toSubBlocks(lzwBytes);
+      for (var j = 0; j < subBlocks.length; j++) bytes.push(subBlocks[j]);
+    });
+
+    // Trailer
+    bytes.push(0x3b);
+
+    return new Uint8Array(bytes);
+  }
+
+  // blockFrames: array of {blockW, blockH, indices} at block resolution;
+  // each is expanded to outW x outH the same way the still-image path does.
+  function buildAnimatedGif(opts) {
+    var frames = opts.blockFrames.map(function (f) {
+      return window.Bitmaker.expandIndices(f.blockW, f.blockH, f.indices, opts.outW, opts.outH);
+    });
+    return encodeAnimatedGif(opts.outW, opts.outH, frames, opts.palette, opts.delayCentiseconds);
+  }
+
   window.Bitmaker = window.Bitmaker || {};
   window.Bitmaker.buildGif = buildGif;
+  window.Bitmaker.buildAnimatedGif = buildAnimatedGif;
 })();
